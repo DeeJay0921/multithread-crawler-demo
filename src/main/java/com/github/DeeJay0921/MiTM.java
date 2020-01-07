@@ -1,30 +1,26 @@
 package com.github.DeeJay0921;
 
-public class MiTM implements javax.net.ssl.TrustManager,
-        javax.net.ssl.X509TrustManager {
-    public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
+import java.security.cert.X509Certificate;
+
+public class MiTM implements TrustManager, X509TrustManager {
+    public X509Certificate[] getAcceptedIssuers() {
         return null;
     }
 
-    public boolean isServerTrusted(
-            java.security.cert.X509Certificate[] certs) {
+    public boolean isServerTrusted(X509Certificate[] certs) {
         return true;
     }
 
-    public boolean isClientTrusted(
-            java.security.cert.X509Certificate[] certs) {
+    public boolean isClientTrusted(X509Certificate[] certs) {
         return true;
     }
 
-    public void checkServerTrusted(
-            java.security.cert.X509Certificate[] certs, String authType)
-            throws java.security.cert.CertificateException {
-        return;
+    public void checkServerTrusted(X509Certificate[] certs, String authType) {
     }
 
-    public void checkClientTrusted(
-            java.security.cert.X509Certificate[] certs, String authType)
-            throws java.security.cert.CertificateException {
-        return;
+    public void checkClientTrusted(X509Certificate[] certs, String authType) {
     }
 }
+

@@ -103,9 +103,9 @@ public class Main {
                 HttpHost proxy = new HttpHost("10.30.6.49", 9090);
                 DefaultProxyRoutePlanner routePlanner = new DefaultProxyRoutePlanner(proxy);
                 return HttpClients.custom()
-                .setRoutePlanner(routePlanner)
-                .setSSLSocketFactory(sslsf)
-                .build();
+                        .setRoutePlanner(routePlanner)
+                        .setSSLSocketFactory(sslsf)
+                        .build();
             }
         } catch (IOException e) {
             e.printStackTrace();
