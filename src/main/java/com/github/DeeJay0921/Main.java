@@ -24,6 +24,11 @@ import java.util.Set;
 
 public class Main {
     public static void main(String[] args) {
+        Integer i = null;
+        if (i == 1) {
+            System.out.println("Test");
+        }
+
         ArrayList<String> linkPool = new ArrayList<>(); // 未处理过的连接池
         linkPool.add("https://sina.cn");
         Set<String> handledLinkPool = new HashSet<>(); // 已经处理过的链接池
@@ -31,8 +36,8 @@ public class Main {
             if (linkPool.isEmpty()) {
                 break;
             }
-            String link = linkPool.get(0);
-            linkPool.remove(0); // 处理过后从未处理的连接池中删除该链接
+
+            String link = linkPool.remove(linkPool.size() - 1); // 获取连接池最后一个链接并删除该链接
 
             if (handledLinkPool.contains(link)) { // 如果该链接已经处理过 跳出本次循环
                 continue;
@@ -42,18 +47,13 @@ public class Main {
                 continue;
             } else { // 合法页面  进行请求
                 System.out.println("link = " + link);
-                String stringHtml = getStringHtml(link);
+                String stringHtml = getStringHtml(validateLink(link));
                 handledLinkPool.add(link); // 处理完成后加入已经处理的连接池
                 Document document = Jsoup.parse(stringHtml);
                 Elements aLinks = document.select("a"); // 获取所有的a标签
 
                 // 将链接加入连接池
-                for (Element alink : aLinks) {
-                    String aLinkHref = alink.attr("href");
-                    if (aLinkHref != null && aLinkHref.contains("sina.cn")) {
-                        linkPool.add(alink.attr("href"));
-                    }
-                }
+                aLinks.stream().map(alink -> alink.attr("href")).forEach(linkPool::add);
 
                 // 对于新闻页做额外处理
                 Elements articleTags = document.select("article");
@@ -65,6 +65,13 @@ public class Main {
                 }
             }
         }
+    }
+
+    private static String validateLink(String link) {
+        if (link.startsWith("//")) {
+            return "https:" + link;
+        }
+        return link;
     }
 
     private static String getStringHtml(String url) {
@@ -111,11 +118,5 @@ public class Main {
             e.printStackTrace();
         }
         return HttpClients.custom().setSSLSocketFactory(sslsf).build();
-//        HttpHost proxy = new HttpHost("10.30.6.49", 9090);
-//        DefaultProxyRoutePlanner routePlanner = new DefaultProxyRoutePlanner(proxy);
-//        return HttpClients.custom()
-//                .setRoutePlanner(routePlanner)
-//                .setSSLSocketFactory(sslsf)
-//                .build();
     }
 }
