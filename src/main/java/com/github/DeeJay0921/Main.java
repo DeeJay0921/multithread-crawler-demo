@@ -23,7 +23,6 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -33,15 +32,8 @@ public class Main {
         String DBurl = "jdbc:h2:file://" + workDir + "/news";
         Connection connection = DriverManager.getConnection(DBurl);
 
-        while (true) {
-            List<String> linkPool = loadLinkPoolFromDataBase(connection, "select LINK from LINKS_TO_BE_PROCESSED"); // 从库里读取未处理过的连接池
-
-            if (linkPool.isEmpty()) {
-                break;
-            }
-
-            String link = linkPool.remove(linkPool.size() - 1); // 获取连接池最后一个链接并从数据库及内存中删除该链接
-            insertLinkIntoDatabase(connection, link, "delete from LINKS_TO_BE_PROCESSED where link = ?");
+        String link;
+        while ((link = getNextLinkThenDelete(connection)) != null) { // 从库里去加载下一条链接 如果能加载到才进行循环
 
             // 直接去查询数据库看该link有没有被处理过
             if (isLinkProcessed(connection, link)) {
@@ -51,7 +43,7 @@ public class Main {
             if (isInterestingLink(link)) { // 如果是感兴趣的页面
                 String stringHtml = getStringHtml(validateLink(link));
                 System.out.println("link = " + link);
-                insertLinkIntoDatabase(connection, link, "insert into LINKS_ALREADY_PROCESSED values ( ? )");
+                updateDataBase(connection, link, "insert into LINKS_ALREADY_PROCESSED values ( ? )");
                 Document document = Jsoup.parse(stringHtml);
                 Elements aLinks = document.select("a"); // 获取所有的a标签
 
@@ -59,7 +51,7 @@ public class Main {
                 for (Element alink : aLinks) {
                     String href = alink.attr("href");
                     if (isInterestingLink(href)) {
-                        insertLinkIntoDatabase(connection, href, "insert into LINKS_TO_BE_PROCESSED values ( ? )");
+                        updateDataBase(connection, href, "insert into LINKS_TO_BE_PROCESSED values ( ? )");
                     }
                 }
                 // 对于新闻页做额外处理
@@ -68,7 +60,16 @@ public class Main {
         }
     }
 
-    private static void insertLinkIntoDatabase(Connection connection, String link, String sql) throws SQLException {
+    private static String getNextLinkThenDelete (Connection connection) throws SQLException {
+        String link = getNextLink(connection, "select LINK from LINKS_TO_BE_PROCESSED LIMIT 1"); // 每次取一个链接出来
+
+        if (link != null) {
+            updateDataBase(connection, link, "delete from LINKS_TO_BE_PROCESSED where link = ?");
+        }
+        return link;
+    }
+
+    private static void updateDataBase(Connection connection, String link, String sql) throws SQLException {
         PreparedStatement preparedStatement = null;
         try {
             preparedStatement = connection.prepareStatement(sql);
@@ -118,25 +119,15 @@ public class Main {
         }
     }
 
-    private static List<String> loadLinkPoolFromDataBase(Connection connection, String sql) throws SQLException {
-        List<String> linkPool = new ArrayList<>();
-        PreparedStatement preparedStatement = null;
-        ResultSet resultSet = null;
-        try {
-            preparedStatement = connection.prepareStatement(sql);
-            resultSet = preparedStatement.executeQuery();
+    private static String getNextLink(Connection connection, String sql) throws SQLException {
+        String link = null;
+        try (PreparedStatement preparedStatement = connection.prepareStatement(sql);
+             ResultSet resultSet = preparedStatement.executeQuery()) {
             while (resultSet.next()) {
-                linkPool.add(resultSet.getString(1));
-            }
-        } finally {
-            if (preparedStatement != null) {
-                preparedStatement.close();
-            }
-            if (resultSet != null) {
-                resultSet.close();
+                link = resultSet.getString(1);
             }
         }
-        return linkPool;
+        return link;
     }
 
     private static boolean isInterestingLink(String url) {
