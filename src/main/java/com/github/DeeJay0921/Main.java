@@ -25,6 +25,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class Main {
     public static void main(String[] args) throws SQLException {
@@ -111,7 +112,7 @@ public class Main {
         if (!articleTags.isEmpty()) {
             for (Element articleTag : articleTags) {
                 String articleTitle = articleTag.child(0).text();
-                String articleContent = articleTag.select(".art_content").text();
+                String articleContent = articleTag.select("p").stream().map(Element::text).collect(Collectors.joining("\n"));
                 try (PreparedStatement preparedStatement = connection.prepareStatement("insert into NEWS (TITLE, CONTENT, URL) values (?,?,?)")) {
                     preparedStatement.setString(1, articleTitle);
                     preparedStatement.setString(2, articleContent);
