@@ -18,25 +18,25 @@ import javax.net.ssl.SSLContext;
 import java.io.IOException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class Main {
+public class Crawler {
+
+    private DatabaseAccessObject dao = new DatabaseAccessObject();
+
     public static void main(String[] args) throws SQLException {
-        String workDir = System.getProperty("user.dir");
-        String DBurl = "jdbc:h2:file://" + workDir + "/news";
-        Connection connection = DriverManager.getConnection(DBurl);
+        new Crawler().run();
+    }
+
+    public void run() throws SQLException {
 
         String link;
-        while ((link = getNextLinkThenDelete(connection)) != null) { // 从库里去加载下一条链接 如果能加载到才进行循环
+        while ((link = dao.getNextLinkThenDelete()) != null) { // 从库里去加载下一条链接 如果能加载到才进行循环
             // 直接去查询数据库看该link有没有被处理过
-            if (isLinkProcessed(connection, link)) {
+            if (dao.isLinkProcessed(link)) {
                 continue;
             }
 
@@ -44,94 +44,35 @@ public class Main {
                 System.out.println("link = " + link);
                 Document document = Jsoup.parse(getStringHtml(validateLink(link)));
                 // 将爬取到的新页面上的链接入库
-                insertNewLinksToDatabase(connection, document);
+                insertNewLinksToDatabase(document);
                 // 对于新闻页做额外处理
-                storeIntoDataBaseIfIsNews(connection, link, document);
+                storeIntoDataBaseIfIsNews(link, document);
                 // 将访问过的链接加入已处理的数据库
-                updateDataBase(connection, link, "insert into LINKS_ALREADY_PROCESSED values ( ? )");
+                dao.updateDataBase(link, "insert into LINKS_ALREADY_PROCESSED values ( ? )");
             }
         }
     }
 
-    private static void insertNewLinksToDatabase(Connection connection, Document document) throws SQLException {
+    private void insertNewLinksToDatabase(Document document) throws SQLException {
         Elements aLinks = document.select("a"); // 获取所有的a标签
         // 将链接加入连接池
         for (Element alink : aLinks) {
             String href = alink.attr("href");
             if (isInterestingLink(href)) {
-                updateDataBase(connection, href, "insert into LINKS_TO_BE_PROCESSED values ( ? )");
+                dao.updateDataBase(href, "insert into LINKS_TO_BE_PROCESSED values ( ? )");
             }
         }
     }
 
-    private static String getNextLinkThenDelete(Connection connection) throws SQLException {
-        String link = getNextLink(connection, "select LINK from LINKS_TO_BE_PROCESSED LIMIT 1"); // 每次取一个链接出来
-
-        if (link != null) {
-            updateDataBase(connection, link, "delete from LINKS_TO_BE_PROCESSED where link = ?");
-        }
-        return link;
-    }
-
-    private static void updateDataBase(Connection connection, String link, String sql) throws SQLException {
-        PreparedStatement preparedStatement = null;
-        try {
-            preparedStatement = connection.prepareStatement(sql);
-            preparedStatement.setString(1, link);
-            preparedStatement.executeUpdate();
-        } finally {
-            if (preparedStatement != null) {
-                preparedStatement.close();
-            }
-        }
-    }
-
-    private static boolean isLinkProcessed(Connection connection, String link) throws SQLException {
-        PreparedStatement preparedStatement = null;
-        ResultSet resultSet = null;
-        try {
-            preparedStatement = connection.prepareStatement("select link from LINKS_ALREADY_PROCESSED where link = ?");
-            preparedStatement.setString(1, link);
-            resultSet = preparedStatement.executeQuery();
-            if (resultSet.next()) {
-                return true;
-            }
-        } finally {
-            if (preparedStatement != null) {
-                preparedStatement.close();
-            }
-            if (resultSet != null) {
-                resultSet.close();
-            }
-        }
-        return false;
-    }
-
-    private static void storeIntoDataBaseIfIsNews(Connection connection, String link, Document document) throws SQLException {
+    private void storeIntoDataBaseIfIsNews(String link, Document document) throws SQLException {
         Elements articleTags = document.select(".art_box");
         if (!articleTags.isEmpty()) {
             for (Element articleTag : articleTags) {
                 String articleTitle = articleTag.child(0).text();
                 String articleContent = articleTag.select("p").stream().map(Element::text).collect(Collectors.joining("\n"));
-                try (PreparedStatement preparedStatement = connection.prepareStatement("insert into NEWS (TITLE, CONTENT, URL) values (?,?,?)")) {
-                    preparedStatement.setString(1, articleTitle);
-                    preparedStatement.setString(2, articleContent);
-                    preparedStatement.setString(3, link);
-                    preparedStatement.executeUpdate();
-                }
+                dao.insertNewsIntoDatabase(link, articleTitle, articleContent);
             }
         }
-    }
-
-    private static String getNextLink(Connection connection, String sql) throws SQLException {
-        String link = null;
-        try (PreparedStatement preparedStatement = connection.prepareStatement(sql);
-             ResultSet resultSet = preparedStatement.executeQuery()) {
-            while (resultSet.next()) {
-                link = resultSet.getString(1);
-            }
-        }
-        return link;
     }
 
     private static boolean isInterestingLink(String url) {
