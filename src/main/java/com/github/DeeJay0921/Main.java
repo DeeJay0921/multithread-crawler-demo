@@ -46,6 +46,7 @@ public class Main {
                 insertNewLinksToDatabase(connection, document);
                 // 对于新闻页做额外处理
                 storeIntoDataBaseIfIsNews(connection, link, document);
+                // 将访问过的链接加入已处理的数据库
                 updateDataBase(connection, link, "insert into LINKS_ALREADY_PROCESSED values ( ? )");
             }
         }
