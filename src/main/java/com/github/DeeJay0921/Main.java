@@ -34,33 +34,35 @@ public class Main {
 
         String link;
         while ((link = getNextLinkThenDelete(connection)) != null) { // 从库里去加载下一条链接 如果能加载到才进行循环
-
             // 直接去查询数据库看该link有没有被处理过
             if (isLinkProcessed(connection, link)) {
                 continue;
             }
 
             if (isInterestingLink(link)) { // 如果是感兴趣的页面
-                String stringHtml = getStringHtml(validateLink(link));
                 System.out.println("link = " + link);
-                updateDataBase(connection, link, "insert into LINKS_ALREADY_PROCESSED values ( ? )");
-                Document document = Jsoup.parse(stringHtml);
-                Elements aLinks = document.select("a"); // 获取所有的a标签
-
-                // 将链接加入连接池
-                for (Element alink : aLinks) {
-                    String href = alink.attr("href");
-                    if (isInterestingLink(href)) {
-                        updateDataBase(connection, href, "insert into LINKS_TO_BE_PROCESSED values ( ? )");
-                    }
-                }
+                Document document = Jsoup.parse(getStringHtml(validateLink(link)));
+                // 将爬取到的新页面上的链接入库
+                insertNewLinksToDatabase(connection, document);
                 // 对于新闻页做额外处理
                 storeIntoDataBaseIfIsNews(connection, link, document);
+                updateDataBase(connection, link, "insert into LINKS_ALREADY_PROCESSED values ( ? )");
             }
         }
     }
 
-    private static String getNextLinkThenDelete (Connection connection) throws SQLException {
+    private static void insertNewLinksToDatabase(Connection connection, Document document) throws SQLException {
+        Elements aLinks = document.select("a"); // 获取所有的a标签
+        // 将链接加入连接池
+        for (Element alink : aLinks) {
+            String href = alink.attr("href");
+            if (isInterestingLink(href)) {
+                updateDataBase(connection, href, "insert into LINKS_TO_BE_PROCESSED values ( ? )");
+            }
+        }
+    }
+
+    private static String getNextLinkThenDelete(Connection connection) throws SQLException {
         String link = getNextLink(connection, "select LINK from LINKS_TO_BE_PROCESSED LIMIT 1"); // 每次取一个链接出来
 
         if (link != null) {
@@ -104,7 +106,7 @@ public class Main {
     }
 
     private static void storeIntoDataBaseIfIsNews(Connection connection, String link, Document document) throws SQLException {
-        Elements articleTags = document.select("article");
+        Elements articleTags = document.select(".art_box");
         if (!articleTags.isEmpty()) {
             for (Element articleTag : articleTags) {
                 String articleTitle = articleTag.child(0).text();
