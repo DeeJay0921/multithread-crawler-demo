@@ -9,11 +9,11 @@ import java.sql.SQLException;
 /**
  * 数据访问对象  用来剥离数据库操作
  */
-public class DatabaseAccessObject {
+public class JdbcCrawlerDao implements CrawlerDao {
 
     private final Connection connection;
 
-    public DatabaseAccessObject() {
+    JdbcCrawlerDao() {
         try {
             this.connection = DriverManager.getConnection("jdbc:h2:file://" + System.getProperty("user.dir") + "/news");
         } catch (SQLException e) {
@@ -21,7 +21,7 @@ public class DatabaseAccessObject {
         }
     }
 
-    private String getNextLink(String sql) throws SQLException {
+    public String getNextLink(String sql) throws SQLException {
         String link = null;
         try (PreparedStatement preparedStatement = connection.prepareStatement(sql);
              ResultSet resultSet = preparedStatement.executeQuery()) {
