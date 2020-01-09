@@ -9,11 +9,11 @@ import java.sql.SQLException;
 /**
  * 数据访问对象  用来剥离数据库操作
  */
-public class DatabaseAccessObject {
+public class JdbcCrawlerDao implements CrawlerDao {
 
     private final Connection connection;
 
-    public DatabaseAccessObject() {
+    JdbcCrawlerDao() {
         try {
             this.connection = DriverManager.getConnection("jdbc:h2:file://" + System.getProperty("user.dir") + "/news");
         } catch (SQLException e) {
@@ -21,12 +21,22 @@ public class DatabaseAccessObject {
         }
     }
 
-    private String getNextLink(String sql) throws SQLException {
+    public String getNextLink(String sql) throws SQLException {
         String link = null;
-        try (PreparedStatement preparedStatement = connection.prepareStatement(sql);
-             ResultSet resultSet = preparedStatement.executeQuery()) {
+        PreparedStatement preparedStatement = null;
+        ResultSet resultSet = null;
+        try {
+            preparedStatement = connection.prepareStatement(sql);
+            resultSet = preparedStatement.executeQuery();
             while (resultSet.next()) {
                 link = resultSet.getString(1);
+            }
+        } finally {
+            if (preparedStatement != null) {
+                preparedStatement.close();
+            }
+            if (resultSet != null) {
+                resultSet.close();
             }
         }
         return link;
@@ -55,11 +65,17 @@ public class DatabaseAccessObject {
     }
 
     public void insertNewsIntoDatabase(String link, String articleTitle, String articleContent) throws SQLException {
-        try (PreparedStatement preparedStatement = connection.prepareStatement("insert into NEWS (TITLE, CONTENT, URL) values (?,?,?)")) {
+        PreparedStatement preparedStatement = null;
+        try {
+            preparedStatement = connection.prepareStatement("insert into NEWS (TITLE, CONTENT, URL) values (?,?,?)");
             preparedStatement.setString(1, articleTitle);
             preparedStatement.setString(2, articleContent);
             preparedStatement.setString(3, link);
             preparedStatement.executeUpdate();
+        } finally {
+            if (preparedStatement != null) {
+                preparedStatement.close();
+            }
         }
     }
 
