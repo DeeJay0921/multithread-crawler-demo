@@ -23,38 +23,43 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class Crawler {
+public class Crawler extends Thread{
 
-    private CrawlerDao dao = new MybatisCrawlerDao();
+    private CrawlerDao dao;
 
-    public static void main(String[] args) throws SQLException {
-        new Crawler().run();
+    public Crawler(CrawlerDao dao) {
+        this.dao = dao;
     }
 
-    public void run() throws SQLException {
+    @Override
+    public void run() {
+        try {
+            String link;
+            while ((link = dao.getNextLinkThenDelete()) != null) { // 从库里去加载下一条链接 如果能加载到才进行循环
+                // 直接去查询数据库看该link有没有被处理过
+                if (dao.isLinkProcessed(link)) {
+                    continue;
+                }
 
-        String link;
-        while ((link = dao.getNextLinkThenDelete()) != null) { // 从库里去加载下一条链接 如果能加载到才进行循环
-            // 直接去查询数据库看该link有没有被处理过
-            if (dao.isLinkProcessed(link)) {
-                continue;
-            }
-
-            if (isInterestingLink(link)) { // 如果是感兴趣的页面
-                System.out.println("link = " + link);
-                Document document = Jsoup.parse(getStringHtml(validateLink(link)));
-                // 将爬取到的新页面上的链接入库
-                insertNewLinksToDatabase(document);
-                // 对于新闻页做额外处理
-                storeIntoDataBaseIfIsNews(link, document);
-                // 将访问过的链接加入已处理的数据库
-                dao.insertLinkIntoProcessed(link);
+                if (isInterestingLink(link)) { // 如果是感兴趣的页面
+                    System.out.println(Thread.currentThread().getName() + " is crawling " + link);
+                    Document document = Jsoup.parse(getStringHtml(validateLink(link)));
+                    // 将爬取到的新页面上的链接入库
+                    insertNewLinksToDatabase(document);
+                    // 对于新闻页做额外处理
+                    storeIntoDataBaseIfIsNews(link, document);
+                    // 将访问过的链接加入已处理的数据库
+                    dao.insertLinkIntoProcessed(link);
 //                dao.updateDataBase(link, "insert into LINKS_ALREADY_PROCESSED values ( ? )");
+                }
             }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
         }
     }
 
     private void insertNewLinksToDatabase(Document document) throws SQLException {
+
         Elements aLinks = document.select("a"); // 获取所有的a标签
         // 将链接加入连接池
         for (Element alink : aLinks) {

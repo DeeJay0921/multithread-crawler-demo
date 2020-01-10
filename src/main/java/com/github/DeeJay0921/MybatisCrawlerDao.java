@@ -24,7 +24,7 @@ public class MybatisCrawlerDao implements CrawlerDao {
     }
 
     @Override
-    public String getNextLinkThenDelete() throws SQLException {
+    public synchronized String getNextLinkThenDelete() throws SQLException {
         String link;
         // 这里的openSession 的参数autoCommit一定要为true,否则每次的删除就没有被提交到数据库
         try (SqlSession session = sqlSessionFactory.openSession(true)) {
