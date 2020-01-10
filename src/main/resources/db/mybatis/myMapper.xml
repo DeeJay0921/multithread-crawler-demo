@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.github.DeeJay0921.mybatis">
+    <!--从库里读取下一条待爬取的链接  返回结果类型为String-->
+    <select id="selectNextLink" resultType="String">
+      SELECT link FROM LINKS_TO_BE_PROCESSED LIMIT 1
+    </select>
+    <!--从库里删除访问过的链接-->
+    <delete id="deleteLink" parameterType="String">
+        delete from LINKS_TO_BE_PROCESSED where link = #{link}
+    </delete>
+    <!--插入一个News 包名要写全 插入的字段已News类内部的字段为准-->
+    <insert id="insertNews"
+            parameterType="com.github.DeeJay0921.News">
+        insert into NEWS (TITLE, CONTENT, URL)
+        values (#{title},#{content},#{url})
+    </insert>
+    <!--从已经访问过的连接池里读取链接看是否存在-->
+    <select id="countLink" resultType="int" parameterType="String">
+      SELECT count(link) FROM LINKS_ALREADY_PROCESSED where LINK = #{link}
+    </select>
+    <!--采用动态SQL决定向那张表插入链接-->
+    <insert id="insertLink" parameterType="HashMap">
+        insert into
+        <choose>
+            <when test="tableName == 'LINKS_TO_BE_PROCESSED'">
+                LINKS_TO_BE_PROCESSED
+            </when>
+            <otherwise>
+                LINKS_ALREADY_PROCESSED
+            </otherwise>
+        </choose>
+        (LINK)
+        values (#{link})
+    </insert>
+</mapper>
