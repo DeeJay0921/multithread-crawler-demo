@@ -59,6 +59,7 @@ public class Crawler extends Thread{
     }
 
     private void insertNewLinksToDatabase(Document document) throws SQLException {
+
         Elements aLinks = document.select("a"); // 获取所有的a标签
         // 将链接加入连接池
         for (Element alink : aLinks) {
