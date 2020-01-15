@@ -1,12 +1,16 @@
 package com.github.DeeJay0921;
 
 import java.math.BigInteger;
+import java.time.Instant;
 
 public class News {
     private BigInteger id;
     private String title;
     private String content;
     private String url;
+    // 时间戳 一般为Date(较为古老) 和 Instant(Java8之后) 两种类型
+    private Instant createdAt;
+    private Instant updatedAt;
 
     public News(String title, String content, String url) {
         this.title = title;
@@ -44,5 +48,21 @@ public class News {
 
     public void setUrl(String url) {
         this.url = url;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(Instant createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(Instant updatedAt) {
+        this.updatedAt = updatedAt;
     }
 }

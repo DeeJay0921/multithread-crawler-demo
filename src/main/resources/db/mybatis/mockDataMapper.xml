@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.github.DeeJay0921.mock">
+    <insert id="insertFakeData" parameterType="com.github.DeeJay0921.News">
+        insert into NEWS (TITLE, CONTENT, URL, CREATED_AT, UPDATED_AT)
+        values (#{title}, #{content}, #{url}, #{createdAt}, #{updatedAt})
+    </insert>
+
+    <select id="selectNews" resultType="com.github.DeeJay0921.News">
+        select ID, TITLE, CONTENT, URL, CREATED_AT, UPDATED_AT
+        from NEWS LIMIT 4000
+    </select>
+</mapper>
