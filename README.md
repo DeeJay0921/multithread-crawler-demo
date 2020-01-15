@@ -13,3 +13,5 @@
 假造数据扩充数据库: `FakeDataGenerator.main()`
 
 从数据库中读取数据插入到`ES`: `ElasticsearchDataGenerator.main()`
+
+运行搜索引擎: `ElasticsearchEngine.main()`
